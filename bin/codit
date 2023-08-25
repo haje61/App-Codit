@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use App::Codit;
+
+my $codit = App::Codit->new(
+);
+
+$codit->MainLoop;
