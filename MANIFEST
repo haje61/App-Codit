@@ -4,6 +4,7 @@ lib/App/Codit.pm
 lib/App/Codit/CodeTextManager.pm
 lib/App/Codit/CoditTagsEditor.pm
 lib/App/Codit/CoditText.pm
+lib/App/Codit/codit.png
 lib/App/Codit/highlight_theme.ctt
 lib/Tk/AppWindow/Ext/CoditMDI.pm
 LICENSE
