@@ -14,6 +14,7 @@ WriteMakefile(
 	PREREQ_PM			=> \%prereq,
 	ABSTRACT_FROM		=> 'lib/App/Codit.pm',
 	AUTHOR				=> 'Hans Jeuken <hanje at cpan dot org>',
+	EXE_FILES => ['bin/codit'],
 	LICENSE				=> 'perl',
     (eval { ExtUtils::MakeMaker->VERSION(6.46) } ? (META_MERGE => {
       'meta-spec' => { version => 2 },

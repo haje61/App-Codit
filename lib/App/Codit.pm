@@ -26,6 +26,13 @@ sub Populate {
 		-logo => Tk::findINC('App/Codit/codit.png'),
 		-extensions => [qw[Art Balloon CoditMDI ToolBar StatusBar MenuBar Navigator Help Settings Plugins]],
 		-documentinterface => 'CoditMDI',
+		-availableplugs => [qw/Sessions/],
+		-plugins => [qw/Sessions/],
+		-aboutinfo => {
+			version => $VERSION,
+			author => 'Hans Jeuken',
+			license => 'Same as Perl',
+		}
 
 		-contentmanagerclass => 'CodeTextManager',
 		-contentmanageroptions => [
@@ -38,7 +45,7 @@ sub Populate {
 			'-showfolds',
 			'-shownumbers',
 			'-showstatus',
-			'-themefile',
+			'-highlight_themefile',
 		],
 
 		-contentindent => 'tab',
@@ -97,6 +104,9 @@ sub Populate {
 			'*end',
 
 			'*page' => 'GUI',
+			'*section' => 'General',
+			-iconsize => ['list', 'Icon size', -values => $iconsizes],
+			'*end',
 			'*section' => 'Menubar',
 			-menuiconsize => ['list', 'Icon size', -values => $iconsizes],
 			'*end',
@@ -107,6 +117,10 @@ sub Populate {
 			'*end',
 			'*section' => 'Statusbar',
 			-statusbarvisible => ['boolean', 'Visible at launch'],
+			'*end',
+			'*section' => 'Navigation panel',
+			-navigatorvisible => ['boolean', 'Visible at launch'],
+			-navigatoriconsize => ['list', 'Icon size', -values => $iconsizes],
 			'*end',
 		],
 	);
@@ -121,19 +135,25 @@ sub Populate {
 	);
 }
 
+sub GetThemeFile {
+	my $self = shift;
+	return $self->extGet('ConfigFolder')->ConfigFolder .'/highlight_theme.ctt';
+}
+
 sub SetThemeFile {
 	my $self = shift;
-	my $name = 'highlight_theme.ctt';
-	my $themefile = $self->extGet('ConfigFolder')->ConfigFolder ."/$name";
-	print "themefile $themefile\n";
-	unless (-e $themefile) {
-		my $default = Tk::findINC("App/Codit/$name");
-		print "default $default\n";
-		my $theme = Tk::CodeText::Theme->new;
-		$theme->load($default);
-		$theme->save($themefile);
-	}
-	$self->configPut(-themefile => $themefile);
+	my $themefile = $self->GetThemeFile;
+	$self->SetDefaultTheme unless -e $themefile;
+	$self->configPut(-highlight_themefile => $themefile);
+}
+
+sub SetDefaultTheme {
+	my $self = shift;
+	my $themefile = $self->GetThemeFile;
+	my $default = Tk::findINC('App/Codit/highlight_theme.ctt');
+	my $theme = Tk::CodeText::Theme->new;
+	$theme->load($default);
+	$theme->save($themefile);
 }
 
 1;

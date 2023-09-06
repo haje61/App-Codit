@@ -36,8 +36,7 @@ sub Populate {
 		-showfolds => [$text],
 		-shownumbers => [$text],
 		-showstatus => [$text],
-		-themefile => [$text],
-		-background => ['SELF', 'DESCENDANTS'],
+		-highlight_themefile => [{ -themefile => $text}],
 		DEFAULT => [$text],
 	);
 	$self->Delegates(
@@ -49,12 +48,15 @@ sub ConfigureCM {
 	my $self = shift;
 	my $ext = $self->Extension;
 	my $cmopt = $ext->configGet('-contentmanageroptions');
-	for (@$cmopt) {
-		print "option $_\n";
-		my $val = $ext->configGet($_);
+	
+	my @o = @$cmopt; #Hack preventing from the original being modified. No idea why this is needed.
+	for (@o) {
+		my $key = $_;
+# 		print "option $key\n";
+		my $val = $ext->configGet($key);
 		if ((defined $val) and ($val ne '')) {
-			print "configuring $_ with value $val\n";
-			$self->configure($_, $val) ;
+# 			print "configuring $key with value $val\n";
+			$self->configure($key, $val) ;
 		}
 	}
 }

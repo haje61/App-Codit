@@ -27,7 +27,7 @@ sub Populate {
 	$self->ConfigSpecs(
 		DEFAULT => ['SELF'],
 	);
-	$self->after(2000, sub { 
+	$self->after(50, sub { 
 		my $theme = Tk::CodeText::Theme->new;
 		$theme->load($themefile);
 		$self->put($theme->get) 

@@ -19,23 +19,52 @@ sub Populate {
 	my ($self,$args) = @_;
 	
 	$self->SUPER::Populate($args);
+
+	my $xt = $self->Subwidget('XText');
+	$xt->bind('<FocusIn>', [$self, 'OnFocusIn']);
+	$xt->bind('<FocusOut>', [$self, 'OnFocusOut']);
+
 	$self->ConfigSpecs(
-		DEFAULT => [$self->Subwidget('XText')],
+		-position => ['METHOD'],
+		DEFAULT => [$xt],
 	);
 }
 
-sub themefile {
-	my ($self, $file) = @_;
-	print "themefile $file\n" if defined $file;
-	return $self->SUPER::themefile($file) if defined $file;
-	return $self->SUPER::themefile;
+sub OnFocusIn {
+	my $self = shift;
+# 	print "focus in $self\n";
+	my $flag = $self->{'nohl_save'};
+	$self->NoHighlighting($flag) if defined $flag;
+	$self->highlightLoop;
+# 	my $is = $self->{'interval_save'};
+# 	if (defined $is) {
+# 		$self->configure(-statusinterval => $is);
+# 		delete $self->{'interval_save'};
+# 	}
 }
 
-# sub themeUpdate {
-# 	my $self = shift;
-# 	print "themeUpdate\n";
-# 	$self->SUPER::themeUpdate(@_);
-# 	$self->highlightPurge(1);
-# }
+sub OnFocusOut {
+	my $self = shift;
+# 	print "focus out $self\n";
+	$self->{'nohl_save'} = $self->NoHighlighting;
+	$self->NoHighlighting(1);
+# 	$self->{'interval_save'} = $self->cget('-statusinterval');
+# 	$self->configure(-statusinterval => 100000)
+}
+
+sub position {
+	my ($self, $pos) = @_;
+	if (defined $pos) {
+		$self->goTo($pos);
+		$self->see($pos);
+	}
+	return $self->index('insert');
+}
+
+sub themeUpdate {
+	my $self = shift;
+	$self->SUPER::themeUpdate(@_);
+	$self->highlightPurge(1);
+}
 
 1;
