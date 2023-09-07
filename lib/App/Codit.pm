@@ -32,7 +32,7 @@ sub Populate {
 			version => $VERSION,
 			author => 'Hans Jeuken',
 			license => 'Same as Perl',
-		}
+		},
 
 		-contentmanagerclass => 'CodeTextManager',
 		-contentmanageroptions => [

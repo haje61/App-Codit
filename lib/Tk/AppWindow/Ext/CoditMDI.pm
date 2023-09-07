@@ -44,31 +44,31 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 	$self->cmdConfig(
 		highlightdialog => ['HighlightDialog', $self],
-		file_open_multi => ['CmdMultiOpen', $self],
+# 		doc_open_multi => ['CmdMultiOpen', $self],
 	);
 	return $self;
 }
 
-sub CmdMultiOpen {
-	my $self = shift;
-	my $res = 1;
-	my $count = 0;
-	my $size = @_;
-	my $sb = $self->extGet('StatusBar');
-	$sb->AddProgressItem('multi_open',
-		-from => 0,
-		-to => $size,
-		-variable => \$count,
-	) if defined $sb;
-	for (@_) {
-		my $file = $_;
-		$res = 0 unless $self->cmdExecute('file_open', $file);
-		$count ++;
-		$self->update;
-	}
-	$sb->Delete('multi_open') if defined $sb;
-	return $res
-}
+# sub CmdMultiOpen {
+# 	my $self = shift;
+# 	my $res = 1;
+# 	my $count = 0;
+# 	my $size = @_;
+# 	my $sb = $self->extGet('StatusBar');
+# 	$sb->AddProgressItem('multi_open',
+# 		-from => 0,
+# 		-to => $size,
+# 		-variable => \$count,
+# 	) if defined $sb;
+# 	for (@_) {
+# 		my $file = $_;
+# 		$res = 0 unless $self->cmdExecute('doc_open', $file);
+# 		$count ++;
+# 		$self->update;
+# 	}
+# 	$sb->Delete('multi_open') if defined $sb;
+# 	return $res
+# }
 
 sub HighlightDialog {
 	my $self = shift;

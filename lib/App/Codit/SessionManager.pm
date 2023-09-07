@@ -29,7 +29,6 @@ sub Populate {
 	my @padding = (-padx => 4, -pady => 4);
 
 	my $art = $plug->extGet('Art');
-	my $mb = $plug->extGet('MenuBar');
 	
 	my @sessions = ();
 	$self->{SESSIONS} = \@sessions;
@@ -66,7 +65,7 @@ sub Populate {
 	$bf->Button(
 		-image => $art->CreateCompound(
 			-text => 'Duplicate',
-			-image => $mb->CreateEmptyImage(22, 22),
+			-image => $art->CreateEmptyImage(22),
 		),
 		-anchor => 'w',
 		-command => ['Duplicate', $self],
@@ -74,7 +73,7 @@ sub Populate {
 	$bf->Button(
 		-image => $art->CreateCompound(
 			-text => 'Rename',
-			-image => $mb->CreateEmptyImage(22, 22),
+			-image => $art->CreateEmptyImage(22),
 		),
 		-anchor => 'w',
 		-command => ['Rename', $self],
@@ -140,29 +139,7 @@ sub GetSelected {
 
 sub NameDialog {
 	my ($self, $text) = @_;
-	my @padding = (-padx => 10, -pady => 10);
-	my $plug = $self->{PLUGIN};
-	my $q = $self->YADialog(
-		-title => 'Session name',
-# 		-image => $self->getArt('dialog-information', 32),
-		-buttons => [qw(Ok Cancel)],
-# 		-text => $text,
-		-defaultbutton => 'Ok',
-	);
-	$q->Label(-image => $plug->getArt('dialog-information', 32))->pack(-side => 'left', @padding);
-	my $f = $q->Frame->pack(-side => 'left', @padding);
-	$f->Label(
-		-anchor => 'w',
-		-text => $text,
-	)->pack(-fill => 'x', -padx => 2, -pady => 2);
-	my $e = $f->Entry->pack(-padx => 2, -pady => 2);
-	
-	my $name;
-	my $answer = $q->Show(-popover => $self);
-	$name = $e->get if $answer eq 'Ok';
-
-	$q->destroy;
-	return $name
+	return $self->{PLUGIN}->popEntry('Session name', $text);
 }
 
 sub NewSession {

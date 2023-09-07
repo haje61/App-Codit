@@ -68,7 +68,7 @@ sub sessionClose {
 		my $fc = $mdi->docForceClose;
 		$mdi->docForceClose(1);
 		for (@list) {
-			$mdi->CmdFileClose($_);
+			$mdi->CmdDocClose($_);
 		}
 		$mdi->docForceClose($fc);
 		return 1;
@@ -203,7 +203,7 @@ sub sessionOpen {
 				$select = $options->{'selected'};
 				$count ++
 			} else {
-				if ($self->cmdExecute('file_open', $file)) {
+				if ($self->cmdExecute('doc_open', $file)) {
 					my $doc = $mdi->docGet($file);
 					for (@saveoptions) {
 						$doc->configure($_, $options->{$_});
@@ -218,10 +218,10 @@ sub sessionOpen {
 		$self->sessionCurrent($name);
 		$mdi->selectOnCreate($seloncreate);
 		$if->AutoUpdate($autoupdate);
-		$mdi->Select($select) if defined $select;
+		$mdi->docSelect($select) if defined $select;
 		return 1
 	} else {
-		warn "Cannot open session file: $file"
+		$self->logWarning("Cannot open session file: $file")
 	}
 	return 0;
 }
@@ -264,7 +264,6 @@ sub sessionSave {
 
 sub sessionSaveAs {
 	my $self = shift;
-	print "sessionSave as\n";
 	my $dialog = $self->YADialog(
 		-buttons => ['Ok', 'Cancel'],
 	);
