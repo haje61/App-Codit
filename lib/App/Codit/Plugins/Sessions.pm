@@ -1,4 +1,4 @@
-package Tk::AppWindow::Plugins::Sessions;
+package App::Codit::Plugins::Sessions;
 
 use strict;
 use warnings;
@@ -8,7 +8,16 @@ use base qw( Tk::AppWindow::BaseClasses::Plugin );
 use File::Path qw(make_path);
 require App::Codit::SessionManager;
 
-my @saveoptions = ('-indentstyle', '-position', '-showfolds', '-shownumbers', '-showstatus', '-syntax', '-tabs', '-wrap');
+my @saveoptions = (
+	'-contentindent',
+	'-contentposition',
+	'-contentsyntax',
+	'-contenttabs',
+	'-contentwrap',
+	'-showfolds',
+	'-shownumbers',
+	'-showstatus',
+);
 
 =head1 DESCRIPTION
 
@@ -18,12 +27,13 @@ Manage your sessions. Saves your named session on exit and reloads it on start.
 
 sub new {
 	my $class = shift;
-	my $self = $class->SUPER::new(@_, 'ConfigFolder', 'MenuBar', 'Navigator');
+	my $self = $class->SUPER::new(@_, 'ConfigFolder', 'MenuBar');
 	return undef unless defined $self;
 	
 	$self->sessionFolder;
 	
 	$self->{CURRENT} = '';
+	$self->{DATA} = {};
 
 	$self->cmdConfig(
 		session_dialog => ['sessionDialog', $self],
@@ -33,12 +43,31 @@ sub new {
 		session_save => ['sessionSave', $self],
 		session_save_as => ['sessionSave', $self],
 	);
+	$self->cmdHookAfter('set_title', 'AdjustTitle', $self);
 	return $self;
+}
+
+sub AdjustTitle {
+	my $self = shift;
+	my $mdi = $self->extGet('CoditMDI');
+	my $doc = $mdi->docSelected;
+	my $name = $self->configGet('-appname');
+	if (defined $doc) {
+		my $label = $mdi->docTitle($doc);
+		$name = "$label - $name";
+	}
+	my $current = $self->sessionCurrent;
+	if ($current ne '') {
+		$name =  "$current: $name" ;
+	}
+	$self->configPut(-title => $name);
 }
 
 sub CanQuit {
 	my $self = shift;
 	$self->sessionSave unless $self->sessionCurrent eq '';
+	$self->extGet('CoditMDI')->docForceClose(1);
+	return 1
 }
 
 sub MenuItems {
@@ -60,17 +89,30 @@ sub MenuItems {
 sub sessionClose {
 	my $self = shift;
 	my $session = $self->sessionCurrent;
-	$self->sessionSave unless $session eq '';
-	$self->sessionCurrent('');
 	my $mdi = $self->extGet('CoditMDI');
-	if ($mdi->CanQuit) {
-		my @list = $mdi->docList;
+	if ($mdi->docConfirmSaveAll) {
+		$self->sessionSave unless $session eq '';
+		$self->sessionCurrent('');
+		my @list = $self->sessionDocList;
 		my $fc = $mdi->docForceClose;
 		$mdi->docForceClose(1);
+		my $if = $mdi->Interface;
+		$mdi->selectDisabled(1);
+		my $autoupdate = $if->autoupdate;
+		$if->autoupdate(0);
+		my $size = @list;
+		my $count = 0;
+		$self->progressAdd('multi_close', 'Close session', $size, \$count);
 		for (@list) {
 			$mdi->CmdDocClose($_);
+			$count ++;
+			$self->update;
 		}
+		$self->progressRemove('multi_close');
+		$mdi->selectDisabled(0);
+		$if->autoupdate($autoupdate);
 		$mdi->docForceClose($fc);
+		$self->AdjustTitle;
 		return 1;
 	}
 	return 0
@@ -87,6 +129,14 @@ sub sessionDelete {
 	return if $name eq $self->sessionCurrent;
 	my $file = $self->sessionFolder . "/$name";
 	unlink $file if -e $file;
+}
+
+sub sessionDocList {
+	my $self = shift;
+	my $interface = $self->extGet('CoditMDI')->Interface;
+	my $disp = $interface->{DISPLAYED};
+	my $undisp = $interface->{UNDISPLAYED};
+	return @$disp, @$undisp;
 }
 
 sub sessionDialog {
@@ -153,77 +203,44 @@ sub sessionNew {
 
 sub sessionOpen {
 	my ($self, $name) = @_;
+
+	my $file = "Sessions/$name";
+	my $cff = $self->extGet('ConfigFolder');
+
 	return if $name eq $self->sessionCurrent;
-	my $file = $self->sessionFolder . "/$name";
-	if (open(OFILE, "<", $file)) {
-		my @list = ();
-		my $section;
-		my %inf = ();
-		while (<OFILE>) {
-			my $line = $_;
-			chomp $line;
-			if ($line =~ /^\[([^\]]+)\]/) { #new section
-# 				print "new section $1\n";
-				if (defined $section) {
-# 					print "pushing $section\n";
-					my %o = %inf;
-					push @list, [$section, \%o]
-				}
-				$section = $1;
-				%inf = ();
-			} elsif ($line =~ s/^([^=]+)=//) { #new key
-				$inf{$1} = $line;
+	return unless $cff->confExists($file);
+	return unless $self->sessionClose;
+
+	my @list = $cff->loadSectionedList($file, 'cdt session');
+
+	my $mdi = $self->extGet('CoditMDI');
+	my $if = $mdi->Interface;
+	$mdi->selectDisabled(1);
+	my $autoupdate = $if->autoupdate;
+	$if->autoupdate(0);
+	my $count = 0;
+	my $size = @list;
+	$self->progressAdd('multi_open', 'Open session', $size, \$count);
+	my $select;
+	for (@list) {
+		my ($file, $options) = @$_;
+		if ($file eq 'general') {
+			$select = $options->{'selected'};
+			$count ++
+		} else {
+			if ($self->cmdExecute('doc_open', $file)) {
+				$mdi->deferredOptions($file, $options);
 			}
+			$count ++;
+			$self->update;
 		}
-		push @list, [$section, \%inf] if (%inf) and (defined $section);
-		close OFILE;
-		return unless $self->sessionClose;
-		my $mdi = $self->extGet('CoditMDI');
-		my $if = $mdi->Interface;
-		my $seloncreate = $mdi->selectOnCreate;
-		my $autoupdate = $if->AutoUpdate;
-		$if->AutoUpdate(0);
-		$mdi->selectOnCreate(0);
-		my $count = 0;
-		my $size = @list;
-		my $sb = $self->extGet('StatusBar');
-		$sb->AddProgressItem('multi_open',
-			-label => 'Opening session',
-			-length => 150,
-			-from => 0,
-			-to => $size,
-# 			-blocks => int($size/2),
-			-variable => \$count,
-		) if defined $sb;
-# 		use Data::Dumper; print Dumper \@list;
-		my $select;
-		for (@list) {
-			my ($file, $options) = @$_;
-			if ($file eq 'general') {
-				$select = $options->{'selected'};
-				$count ++
-			} else {
-				if ($self->cmdExecute('doc_open', $file)) {
-					my $doc = $mdi->docGet($file);
-					for (@saveoptions) {
-						$doc->configure($_, $options->{$_});
-					}
-				}
-				$count ++;
-				$self->update;
-			}
-# 			print $count , "\n";
-		}
-		$sb->Delete('multi_open') if defined $sb;
-		$self->sessionCurrent($name);
-		$mdi->selectOnCreate($seloncreate);
-		$if->AutoUpdate($autoupdate);
-		$mdi->docSelect($select) if defined $select;
-		return 1
-	} else {
-		$self->logWarning("Cannot open session file: $file")
 	}
-	return 0;
+	$self->progressRemove('multi_open');
+	$self->sessionCurrent($name);
+	$self->AdjustTitle;
+	$mdi->selectDisabled(0);
+	$if->autoupdate($autoupdate);
+	$mdi->docSelect($select) if defined $select;
 }
 
 sub sessionSave {
@@ -233,33 +250,27 @@ sub sessionSave {
 	my $name = $self->sessionCurrent;
 	return $self->sessionSaveAs if $name eq '';
 
-	my $file = $self->sessionFolder . "/$name";
+	my $file = "Sessions/$name";
+	my $cff = $self->extGet('ConfigFolder');
+	my $mdi = $self->extGet('CoditMDI');
 
 	#getting all document names ordered as they are on the tab bar.
-	my $mdi = $self->extGet('CoditMDI');
-	my $interface = $mdi->Interface;
-	my $disp = $interface->{DISPLAYED};
-	my $undisp = $interface->{UNDISPLAYED};
-	my @items = (@$disp, @$undisp);
-
-	#writing to file
-	if (open(OFILE, ">", $file)) {
-		for (@items) {
-			my $docname = $_;
-			if (-e $docname) {
-				print OFILE "[$docname]\n";
-				my $doc = $mdi->docGet($docname);
-				for (@saveoptions) {
-					print OFILE $_, '=', $doc->cget($_), "\n";
-				}
-			}
+	my @items = $self->sessionDocList;
+	my @list = (['general', {selected => $mdi->docSelected}]);
+	for (@items) {
+		my $item = $_;
+		if ($mdi->deferredExists($item)) {
+			my $options = $mdi->deferredOptions($item);
+			my %h = %$options;
+			push @list, [$item, \%h]
+		} else {
+			my $doc = $mdi->docGet($item);
+			my %h = ();
+			for (@saveoptions) { $h{$_} = $doc->cget($_) }
+			push @list, [$item, \%h]
 		}
-		print OFILE "[general]\n";
-		print OFILE "selected=", $mdi->docSelected, "\n";
-		close OFILE;
-		return 1
 	}
-	return 0
+	$cff->saveSectionedList($file, 'cdt session', @list)
 }
 
 sub sessionSaveAs {
@@ -279,6 +290,7 @@ sub sessionSaveAs {
 	if (($but eq 'Ok') and ($text ne '')) {
 		$self->sessionCurrent($text);
 		$self->sessionSave;
+		$self->AdjustTitle;
 	}
 	
 }
@@ -303,9 +315,15 @@ sub Unload {
 	/) {
 		$self->cmdRemove($_);
 	}
+	$self->sessionCurrent('');
+	$self->cmdUnhookAfter('set_title', 'AdjustTitle', $self);
+	$self->AdjustTitle;
 	return 1
 }
 
 
 
 1;
+
+
+

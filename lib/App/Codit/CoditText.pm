@@ -15,56 +15,47 @@ $VERSION="0.01";
 use base qw(Tk::Derived Tk::CodeText);
 Construct Tk::Widget 'CoditText';
 
-sub Populate {
-	my ($self,$args) = @_;
-	
-	$self->SUPER::Populate($args);
+#sub Populate {
+#	my ($self,$args) = @_;
+#	
+#	$self->SUPER::Populate($args);
+#	my $xt = $self->Subwidget('XText');
+#
+#	$self->ConfigSpecs(
+#		DEFAULT => [$xt],
+#	);
+#	$self->Delegates(
+#		DEFAULT => $xt,
+#	);
+#}
 
-	my $xt = $self->Subwidget('XText');
-	$xt->bind('<FocusIn>', [$self, 'OnFocusIn']);
-	$xt->bind('<FocusOut>', [$self, 'OnFocusOut']);
+sub export {
+	my ($self, $file) = @_;
 
-	$self->ConfigSpecs(
-		-position => ['METHOD'],
-		DEFAULT => [$xt],
-	);
-}
-
-sub OnFocusIn {
-	my $self = shift;
-# 	print "focus in $self\n";
-	my $flag = $self->{'nohl_save'};
-	$self->NoHighlighting($flag) if defined $flag;
-	$self->highlightLoop;
-# 	my $is = $self->{'interval_save'};
-# 	if (defined $is) {
-# 		$self->configure(-statusinterval => $is);
-# 		delete $self->{'interval_save'};
-# 	}
-}
-
-sub OnFocusOut {
-	my $self = shift;
-# 	print "focus out $self\n";
-	$self->{'nohl_save'} = $self->NoHighlighting;
-	$self->NoHighlighting(1);
-# 	$self->{'interval_save'} = $self->cget('-statusinterval');
-# 	$self->configure(-statusinterval => 100000)
-}
-
-sub position {
-	my ($self, $pos) = @_;
-	if (defined $pos) {
-		$self->goTo($pos);
-		$self->see($pos);
+	unless (open OUTFILE, '>', $file) { 
+		warn "cannot open $file";
+		return 0
+	};
+	my $index = '1.0';
+	while ($self->compare($index,'<','end')) {
+		my $end = $self->index("$index lineend + 1c");
+		my $line = $self->get($index,$end);
+		print OUTFILE $line;
+		$index = $end;
 	}
-	return $self->index('insert');
+	close OUTFILE;
+	return 1
 }
 
-sub themeUpdate {
-	my $self = shift;
-	$self->SUPER::themeUpdate(@_);
-	$self->highlightPurge(1);
+sub save {
+	my ($self, $file) = @_;
+	if ($self->export($file)) {
+		$self->clearModified;
+		$self->log("Saved $file");
+		return 1
+	}
+	return 0
 }
-
 1;
+
+

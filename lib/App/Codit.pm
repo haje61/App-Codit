@@ -24,18 +24,24 @@ sub Populate {
 	my %opts = (
 		-appname => 'Codit',
 		-logo => Tk::findINC('App/Codit/codit.png'),
-		-extensions => [qw[Art Balloon CoditMDI ToolBar StatusBar MenuBar Navigator Help Settings Plugins]],
+		-extensions => [qw[Art Balloon CoditMDI ToolBar StatusBar MenuBar Navigator ToolPanel Help Settings Plugins]],
+		-availableplugs => [qw/Backups Bookmarks Colors Console FileBrowser Git 
+			PerlSubs PodViewer SearchReplace Sessions Snippets WordCompletion/],
 		-documentinterface => 'CoditMDI',
-		-availableplugs => [qw/Sessions/],
-		-plugins => [qw/Sessions/],
+		-namespace => 'App::Codit',
+#		-plugins => [qw/Sessions/],
+
 		-aboutinfo => {
 			version => $VERSION,
 			author => 'Hans Jeuken',
 			license => 'Same as Perl',
 		},
+		-helpfile => Tk::findINC('App/Codit/Help/index.html'),
+		-helptype => 'html',
 
 		-contentmanagerclass => 'CodeTextManager',
 		-contentmanageroptions => [
+			'-contentautoindent', 
 			'-contentbackground', 
 			'-contentfont', 
 			'-contentforeground', 
@@ -48,6 +54,7 @@ sub Populate {
 			'-highlight_themefile',
 		],
 
+		-contentautoindent => 1, 
 		-contentindent => 'tab',
 		-contenttabs => '8m',
 		-contentwrap => 'none',
@@ -56,25 +63,6 @@ sub Populate {
 		-showstatus => 1,
 
 
-		-mainmenuitems => [
-#This table is best viewed with tabsize 3.
-	#			 type					menupath			label						cmd						icon					keyb			config variable
-			[	'menu', 				'View',			"~Edit" 	], 
-			[	'menu_normal',		'Edit::',		"~Copy",					'<Control-c>',			'edit-copy',		'*CTRL+C'			], 
-			[	'menu_normal',		'Edit::',		"C~ut",					'<Control-x>',			'edit-cut',			'*CTRL+X'			], 
-			[	'menu_normal',		'Edit::',		"~Paste",				'<Control-v>',			'edit-paste',		'*CTRL+V'			], 
-			[	'menu_separator',	'Edit::', 		'e1' ], 
-			[	'menu_normal',		'Edit::',		"U~ndo",					'<Control-z>',			'edit-undo',		'*CTRL+Z'			], 
-			[	'menu_normal',		'Edit::',		"~Redo",					'<Control-Z>',			'edit-redo',		'*CTRL+SHIFT+Z'	], 
-			[	'menu_separator',	'Edit::', 		'e2' ], 
-			[	'menu_normal',		'Edit::',		"Co~mment",				'<Control-g>',			undef,				'*CTRL+G'	], 
-			[	'menu_normal',		'Edit::',		"~Uncomment",			'<Control-G>',			undef,				'*CTRL+SHIFT+G'	], 
-			[	'menu_separator',	'Edit::', 		'e3' ], 
-			[	'menu_normal',		'Edit::',		"~Indent",				'<Control-j>',			undef,				'*CTRL+J'	], 
-			[	'menu_normal',		'Edit::',		"Unin~dent",			'<Control-J>',			undef,				'*CTRL+SHIFT+J'	], 
-			[	'menu_separator',	'Edit::', 		'e4' ], 
-			[	'menu_normal',		'Edit::',		"~Select all",			'<Control-a>',			'edit-select-all','*CTRL+A'			], 
-		],
 		-toolitems => [
 	#			 type					label			cmd					icon					help		
 			[	'tool_separator' ],
@@ -94,6 +82,8 @@ sub Populate {
 			-contentfont => ['font', 'Font'],
 			'*end',
 			'*section' => 'Editor settings',
+			-contentautoindent => ['boolean', 'Auto indent'],
+			-contentindent => ['text', 'Indent style'],
 			-contenttabs => ['text', 'Tab size'],
 			-contentwrap => ['radio', 'Wrap', -values => [qw[none char word]]],
 			'*end',
@@ -104,23 +94,21 @@ sub Populate {
 			'*end',
 
 			'*page' => 'GUI',
-			'*section' => 'General',
-			-iconsize => ['list', 'Icon size', -values => $iconsizes],
+			'*section' => 'Icon sizes',
+			-iconsize => ['list', 'General', -values => $iconsizes],
+			-menuiconsize => ['list', 'Menu bar', -values => $iconsizes],
+			-tooliconsize => ['list', 'Tool bar', -values => $iconsizes],
+			-navigatorpaneliconsize => ['list', 'Navigator panel', -values => $iconsizes],
+			-toolpaneliconsize => ['list', 'Tool panel', -values => $iconsizes],
 			'*end',
-			'*section' => 'Menubar',
-			-menuiconsize => ['list', 'Icon size', -values => $iconsizes],
+			'*section' => 'Visibility at lauch',
+			-toolbarvisible => ['boolean', 'Tool bar'],
+			-statusbarvisible => ['boolean', 'Status bar'],
+			-navigatorpanelvisible => ['boolean', 'Navigation panel'],
+			-toolpanelvisible => ['boolean', 'Tool panel'],
 			'*end',
-			'*section' => 'Toolbar',
-			-toolbarvisible => ['boolean', 'Visible at launch'],
-			-tooliconsize => ['list', 'Icon size', -values => $iconsizes],
+			'*section' => 'Tool bar',
 			-tooltextposition => ['radio', 'Text position', -values => [qw[none left right top bottom]]],
-			'*end',
-			'*section' => 'Statusbar',
-			-statusbarvisible => ['boolean', 'Visible at launch'],
-			'*end',
-			'*section' => 'Navigation panel',
-			-navigatorvisible => ['boolean', 'Visible at launch'],
-			-navigatoriconsize => ['list', 'Icon size', -values => $iconsizes],
 			'*end',
 		],
 	);
@@ -157,3 +145,6 @@ sub SetDefaultTheme {
 }
 
 1;
+
+
+
