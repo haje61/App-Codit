@@ -77,6 +77,7 @@ sub FlipPod {
 		$self->PodRemove($name);
 	} else {
 		$self->PodAdd($name);
+		$self->Refresh;
 	}
 }
 

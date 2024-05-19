@@ -1,22 +1,40 @@
 # App-Codit
 
-Codit is a versatile text editor / integrated development environment aimed at the Perl programming language.
+Codit is a versatile text editor / integrated development environment aimed 
+at the Perl programming language.
 
 It is written in Perl/Tk and based on the Tk::AppWindow application framework.
 
 It uses the Tk::CodeText text widget for editing.
 
-Codit has been under development for about one year now. And even though it is  considered alpha software, it already has gone quite some miles on our systems.
+Codit has been under development for about one year now. And even though it is considered
+alpha software, it already has gone quite some miles on our systems.
 
-It features a multi document interface that can hold an unlimited number of documents, navigable through the tab bar at the top and a document list in the left side panel. 
+It features a multi document interface that can hold an unlimited number of documents,
+navigable through the tab bar at the top and a document list in the left side panel. 
 
 It has a plugin system designed to invite users to write their own plugins.
 
-It is fully configurable through a configuration window, allowing you to set defaults for editing, the graphical user interface, syntax highlighting and (un)loading plugins.
+It is fully configurable through a configuration window, allowing you to set defaults for
+editing, the graphical user interface, syntax highlighting and (un)loading plugins.
 
-Tk::CodeText offers syntax highlighting and code folding in plenty formats and languages. It has and advanced word based undo/redo stack that keeps track of selections and save points. It does auto indent, comment, uncomment, indent and unindent. Tab size and indent style are fully user configurable.
+Tk::CodeText offers syntax highlighting and code folding in plenty formats and languages.
+It has and advanced word based undo/redo stack that keeps track of selections and save points.
+It does auto indent, comment, uncomment, indent and unindent. Tab size and indent style are
+fully user configurable.
 
 Enjoy playing!
+
+# Requirements
+
+The following Perl modules must be installed:
+
+    * File::Path
+    * Test::Tk
+    * Tk
+    * Tk::AppWindow
+    * Tk::CodeText
+    * Tk::FileBrowser
 
 # Installation
 
@@ -74,7 +92,7 @@ Loads a session at launch. The plugin Sessions must be loaded for this to work.
     -y or -syntax
 Specify the default syntax to use for syntax highlighting. Codit will determine the syntax of documents by their extension. This options comes in handy when the file you are loading does not have an extension.
 
-(1) You can specify a list of items by separating them with a ';'.
+(1) You can specify a list of items by separating them with a ':'.
 
 # Troubleshooting
 

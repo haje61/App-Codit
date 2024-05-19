@@ -8,7 +8,7 @@ use Test::More tests => 3;
 use File::Spec;
 $mwclass = 'App::Codit';
 #$delay = 1500;
-$quitdelay = 1000;
+$quitdelay = 2500;
 
 BEGIN { use_ok('App::Codit') };
 

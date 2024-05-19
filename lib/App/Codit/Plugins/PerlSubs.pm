@@ -83,7 +83,9 @@ sub GetDocument {
 	my $name = $self->{NAME};
 	my $mdi = $self->extGet('CoditMDI');
 	return undef unless defined $name;
-	return $name, $mdi->docGet($name)->CWidg;
+	my $doc = $mdi->docGet($name);
+	return undef unless defined $doc;
+	return $name, $doc->CWidg;
 }
 
 sub NewDocument {
