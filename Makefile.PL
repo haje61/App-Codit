@@ -2,10 +2,11 @@ use ExtUtils::MakeMaker;
 
 use strict;
 my %prereq = (
-	'Test::Tk'							=> '3.02',
-	'Tk'									=> '804.023',
-	'Tk::AppWindow'					=> '0.02',
-	'Tk::CodeText'						=> '0.18',
+	'File::Path'          => '2.18',
+	'Test::Tk'            => '3.02',
+	'Tk'                  => '804.023',
+	'Tk::AppWindow'       => '0.02',
+	'Tk::CodeText'        => '0.46',
 );
 
 WriteMakefile(
@@ -27,4 +28,5 @@ WriteMakefile(
       }}
     ) : () ),
 );
+
 

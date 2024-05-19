@@ -1,5 +1,11 @@
 package App::Codit::Plugins::Sessions;
 
+=head1 NAME
+
+App::Codit::Plugins::Sessions - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
 
@@ -22,6 +28,15 @@ my @saveoptions = (
 =head1 DESCRIPTION
 
 Manage your sessions. Saves your named session on exit and reloads it on start.
+
+=head1 DETAILS
+
+The sessions plugin allows you to save a collection of documents as a session. 
+When re-opening the session the documents are loaded in the exact order as they 
+were when the session was closed. Also the syntax option, tab size, indent style 
+and insert cursor position are saved.
+
+The session manager allows you to keep your sessions orderly.
 
 =cut
 
@@ -94,23 +109,21 @@ sub sessionClose {
 		$self->sessionSave unless $session eq '';
 		$self->sessionCurrent('');
 		my @list = $self->sessionDocList;
+
 		my $fc = $mdi->docForceClose;
 		$mdi->docForceClose(1);
-		my $if = $mdi->Interface;
-		$mdi->selectDisabled(1);
-		my $autoupdate = $if->autoupdate;
-		$if->autoupdate(0);
+		$mdi->silentMode(1);
+
 		my $size = @list;
 		my $count = 0;
 		$self->progressAdd('multi_close', 'Close session', $size, \$count);
 		for (@list) {
-			$mdi->CmdDocClose($_);
+			$self->cmdExecute('doc_close', $_);
 			$count ++;
 			$self->update;
 		}
 		$self->progressRemove('multi_close');
-		$mdi->selectDisabled(0);
-		$if->autoupdate($autoupdate);
+		$mdi->silentMode(0);
 		$mdi->docForceClose($fc);
 		$self->AdjustTitle;
 		return 1;
@@ -131,14 +144,6 @@ sub sessionDelete {
 	unlink $file if -e $file;
 }
 
-sub sessionDocList {
-	my $self = shift;
-	my $interface = $self->extGet('CoditMDI')->Interface;
-	my $disp = $interface->{DISPLAYED};
-	my $undisp = $interface->{UNDISPLAYED};
-	return @$disp, @$undisp;
-}
-
 sub sessionDialog {
 	my $self = shift;
 	my $d = $self->SessionManager(
@@ -153,6 +158,14 @@ sub sessionExists {
 	my ($self, $name) = @_;
 	return 1 if -e $self->sessionFolder . "/$name";
 	return 0
+}
+
+sub sessionDocList {
+	my $self = shift;
+	my $interface = $self->extGet('CoditMDI')->Interface;
+	my $disp = $interface->{DISPLAYED};
+	my $undisp = $interface->{UNDISPLAYED};
+	return @$disp, @$undisp;
 }
 
 sub sessionFillMenu {
@@ -199,6 +212,7 @@ sub sessionList {
 sub sessionNew {
 	my $self = shift;
 	$self->sessionClose;
+	$self->extGet('CoditMDI')->docSelectFirst;
 }
 
 sub sessionOpen {
@@ -214,10 +228,8 @@ sub sessionOpen {
 	my @list = $cff->loadSectionedList($file, 'cdt session');
 
 	my $mdi = $self->extGet('CoditMDI');
-	my $if = $mdi->Interface;
-	$mdi->selectDisabled(1);
-	my $autoupdate = $if->autoupdate;
-	$if->autoupdate(0);
+	$mdi->silentMode(1);
+
 	my $count = 0;
 	my $size = @list;
 	$self->progressAdd('multi_open', 'Open session', $size, \$count);
@@ -238,9 +250,17 @@ sub sessionOpen {
 	$self->progressRemove('multi_open');
 	$self->sessionCurrent($name);
 	$self->AdjustTitle;
-	$mdi->selectDisabled(0);
-	$if->autoupdate($autoupdate);
-	$mdi->docSelect($select) if defined $select;
+
+	$mdi->silentMode(0);
+
+	$mdi->interfaceCollapse;
+	if ((defined $select) and ($mdi->docExists($select))) {
+		$self->cmdExecute('doc_select',$select)
+	} else {
+		$mdi->docSelectFirst
+	}
+	$self->update;
+	$self->StatusMessage("Session '$name' loaded");
 }
 
 sub sessionSave {
@@ -283,9 +303,10 @@ sub sessionSaveAs {
 		-justify => 'left',
 	)->pack(-fill => 'x', -padx => 3, -pady => 3);
 	my $text = '';
-	$dialog->Entry(
+	my $e = $dialog->Entry(
 		-textvariable => \$text,
 	)->pack(-fill => 'x', -padx => 3, -pady => 3);
+	$e->focus;
 	my $but = $dialog->show(-popover => $self->toplevel);
 	if (($but eq 'Ok') and ($text ne '')) {
 		$self->sessionCurrent($text);
@@ -321,9 +342,45 @@ sub Unload {
 	return 1
 }
 
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
+
 
 
 1;
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -2,7 +2,7 @@ package App::Codit::SessionManager;
 
 =head1 NAME
 
-App::Codit - IDE for and in Perl
+App::Codit::SessionManager - Session manager used by the Sessions plugin
 
 =cut
 
@@ -22,7 +22,7 @@ sub Populate {
 	my ($self,$args) = @_;
 	
 	my $plug = delete $args->{'-plugin'};
-	die 'You must specify the -plugin option' unless defined $plug;
+	carp 'You must specify the -plugin option' unless defined $plug;
 
 	$self->SUPER::Populate($args);
 
@@ -178,6 +178,32 @@ sub Rename {
 	move("$f/$sel", "$f/$name");
 	$self->Refresh;
 }
+
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
 
 
 1;

@@ -1,9 +1,15 @@
 package App::Codit::Plugins::PodViewer;
 
+=head1 NAME
+
+App::Codit::Plugins::PodViewer - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
 
-use base qw( Tk::AppWindow::BaseClasses::Plugin );
+use base qw( Tk::AppWindow::BaseClasses::PluginJobs );
 
 require Tk::NoteBook;
 require Tk::Pod::Text;
@@ -11,6 +17,15 @@ require Tk::Pod::Text;
 =head1 DESCRIPTION
 
 Add a Perl pod viewer to your open files.
+
+=head1 DETAILS
+
+PodViewer adds a I<Pod> button to the toolbar. 
+When you click it the frame of the current selected document 
+will split and the bottom half will show the pod documentation
+in your document.
+
+The viewer is refreshed after you make an edit.
 
 =cut
 
@@ -21,12 +36,35 @@ sub new {
 
 	$self->{DOCS} = {};
 	$self->{MODIFIEDSAVE} = {};
-	$self->{INTERVAL} =3;
-	$self->{REFRESHID} = undef;
+	$self->interval(1000);
+	$self->cmdHookAfter('doc_close', 'docCloseAfter', $self);
+	$self->cmdHookBefore('doc_close', 'docBefore', $self);
 	$self->cmdConfig(
 		flip_pod => ['FlipPod', $self],
 	);
+	$self->jobStart('PodViewer', 'RefreshCycle', $self);
 	return $self;
+}
+
+sub docCloseAfter {
+	my ($self, $result) = @_;
+	my $name = $self->{DOCNAME};
+	$self->{DOCNAME} = undef;
+	return 0 unless $result;
+	if ((defined $name) and $result) {
+		$self->PodRemove($name);
+		delete $self->{DOCS}->{$name}
+	}
+	return $result
+}
+
+sub docBefore {
+	my $self = shift;
+	my ($name ) = @_;
+	if (defined $name) {
+		$self->{DOCNAME} = $name;
+	}
+	return @_;
 }
 
 sub FlipPod {
@@ -113,7 +151,6 @@ sub PodAdd {
 		-widget => $podframe,
 	)->pack(-fill => 'x', -before => $podframe);
 	$self->{DOCS}->{$name} = [$pod, $adj, $podframe];
-	$self->RefreshCycle;
 }
 
 sub PodFile {
@@ -138,23 +175,21 @@ sub PodRemove {
 	my ($self, $name) = @_;
 	my $docs = $self->{DOCS};  
 	my $d = $docs->{$name};
+	return unless defined $d;
 	my ($pod, $adj, $podframe) = @$d;
-	$adj->destroy;
-	$podframe->destroy;
+	$adj->destroy if defined $adj;
+	$podframe->destroy if defined $podframe;
 	delete $docs->{$name};
 	delete $self->{MODIFIEDSAVE}->{$name};
-	my @l = keys %$docs;
-	$self->RefreshCancel unless @l;
 }
 
 sub Refresh {
-	my ($self, $name, $em) = @_;
+	my ($self, $name) = @_;
 	my $mdi = $self->extGet('CoditMDI');
 	my $widg = $mdi->docGet($name)->CWidg;
 	my $file = $self->PodFile;
 	my $pod = $self->{DOCS}->{$name}->[0];
 	$widg->saveExport($file);
-	$self->{MODIFIEDSAVE}->{$name} = $em;
 	my $title = $self->configGet('-title');
 	$pod->reload;
 	$self->configPut(-title => $title);
@@ -171,20 +206,13 @@ sub RefreshCycle {
 			my $em = $widg->editModified;
 			my $modified = $self->{MODIFIEDSAVE}->{$name};
 			if (defined $modified) {
-				$self->Refresh($name, $em) if $em ne $modified
+				$self->Refresh($name) if $em ne $modified
 			} else {
-				$self->Refresh($name, $em)
+				$self->Refresh($name)
 			}
+			$self->{MODIFIEDSAVE}->{$name} = $em;
 		}
 	}
-	my $interval = $self->{INTERVAL};
-	$self->{REFRESHID} = $self->after($interval * 1000, ['RefreshCycle', $self]);
-}
-
-sub RefreshCancel {
-	my $self = shift;
-	my $id = $self->{REFRESHID};
-	$self->afterCancel($id) if defined $id;
 }
 
 sub ToolItems {
@@ -201,15 +229,44 @@ sub Quit {
 
 sub Unload {
 	my $self = shift;
+	$self->SUPER::Unload;
 	my @pods = $self->PodList;
 	for (@pods) { $self->PodRemove($_) }
-	$self->RefreshCancel;
 	unlink $self->PodFile;
 	$self->cmdRemove('flip_pod');
 	return 1
 }
 
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
+
+
 1;
+
+
 
 
 

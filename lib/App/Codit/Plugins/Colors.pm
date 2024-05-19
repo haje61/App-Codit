@@ -1,5 +1,11 @@
 package App::Codit::Plugins::Colors;
 
+=head1 NAME
+
+App::Codit::Plugins::Colors - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
 require Tk::ColorPicker;
@@ -10,6 +16,16 @@ use base qw( Tk::AppWindow::BaseClasses::Plugin );
 
 Easily select and insert colors.
 
+=head1 DETAILS
+
+The Colors plugin lets you choose a color and insert it’s hex value into your document. 
+
+You can select a color in RGB, CMY and HSV space. Whenever you select a color it is added to the Recent tab. 
+
+It allows you to specify color depths 4, 8, 12 and 16 bits per color.
+
+You can pick a color from any place on the screen with the pick button. This does not work on Windows.
+
 =cut
 
 sub new {
@@ -18,7 +34,7 @@ sub new {
 	return undef unless defined $self;
 	
 	my $tp = $self->extGet('ToolPanel');
-	my $page = $tp->addPage('Colors', 'fill-color', 'Select and insert colors');
+	my $page = $tp->addPage('Colors', 'fill-color', undef, 'Select and insert colors');
 	
 	my $color = '';
 	my @padding = (-padx => 3, -pady => 3);
@@ -92,5 +108,35 @@ sub Unload {
 	return 1
 }
 
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
+
 
 1;
+
+
+
+

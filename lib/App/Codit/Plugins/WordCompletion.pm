@@ -1,9 +1,16 @@
 package App::Codit::Plugins::WordCompletion;
 
+=head1 NAME
+
+App::Codit::Plugins::WordCompletion - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
+use Carp;
 
-use base qw( Tk::AppWindow::BaseClasses::Plugin );
+use base qw( Tk::AppWindow::BaseClasses::PluginJobs );
 
 =head1 DESCRIPTION
 
@@ -28,76 +35,175 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_,);
 	return undef unless defined $self;
-	$self->{INTERVAL} = 20;
-	$self->{WORDDATA} = {};
-	$self->{LINEDATA} = {};
-	$self->{CURDOC} = '';
-	
-	$self->Cycle;
+	$self->{DOCPOOL} = {};
+	$self->interval(10);
+	$self->{ACTIVEDELAY} = 300;
+	$self->cmdHookBefore('deferred_open', 'docOpen', $self);
+	$self->cmdHookAfter('modified', 'activate', $self);
+	$self->cmdHookAfter('doc_close', 'docClose', $self);
+
 	return $self;
 }
 
-sub Cycle {
-	my $self = shift;
-	my $mdi = $self->extGet('CoditMDI');
-	my $name = $mdi->docSelected;
-	if (defined $name) {
-		my $widg = $mdi->docGet($name)->CWidg;
-		my $data = $self->{WORDDATA}->{$name};
-		$data = {} unless defined $data;
-		my $line = $self->{LINEDATA}->{$name};
-		$line = 1 unless defined $line;
+sub _pool {
+	return $_[0]->{DOCPOOL}
+}
 
-#		if ($line eq 1) {
-#			use Data::Dumper;
-#			print Dumper $data;
-#		}
-		my $content = $widg->get("$line.0", "$line.0 lineend");
+sub activeDelay {
+	my $self = shift;
+	$self->{ACTIVEDELAY} = shift if @_;
+	return $self->{ACTIVEDELAY}
+}
+
+
+sub activate {
+	my $self = shift;
+	my ($name) = @_;
+	$name = $self->extGet('CoditMDI')->docSelected unless defined $name;
+	my $id = $self->{'active_id'};
+	$self->afterCancel($id) if defined $id;
+	return @_ unless (defined $name) and $name;
+	$self->{'active_id'} = $self->after($self->activeDelay, ['postChoices', $self, $name]);
+	return @_;
+}
+
+sub docClose {
+	my $self = shift;
+	my ($name) = @_;
+	$self->jobEnd($name) if $self->jobExists($name);
+	delete $self->_pool->{$name};
+	return @_;
+}
+
+sub docExists {
+	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
+	return exists $self->_pool->{$name}
+}
+
+sub docList {
+	my $self = shift;
+	my $p = $self->_pool;
+	return keys %$p
+}
+
+sub docOpen {
+	my $self = shift;
+	my ($name) = @_;
+#	print "starting job scan\n";
+	return @_ unless defined $name;
+#	return @_ if $self->docExists($name);
+	$self->_pool->{$name} = {
+		line => 1,
+		data => {},
+	};
+	$self->jobStart($name, 'scan', $self, $name) unless $self->jobExists($name);
+	return @_;
+}
+
+sub getChoices {
+	my ($self, $name, $word) = @_;
+	my $data = $self->_pool->{$name}->{'data'};
+	my @choices = ();
+#	print "Word: $word\n";
+	for (sort keys %$data) {
+		my $test = $_;
+#		print "Test: $test\n";
+		next if length($test) < length($word);
+		push @choices, $test if lc(substr($test, 0, length($word))) eq lc($word);
+	}
+	return @choices
+}
+
+sub postChoices {
+#	print "postChoices\n";
+	my ($self, $name) = @_;
+	$self->jobStart($name, 'scan', $self, $name) unless $self->jobExists($name);
+	my $doc = $self->mdi->docGet($name)->CWidg;
+	my $ins = $doc->index('insert');
+	my $line = $doc->get("$ins linestart", $ins);
+#	print "line $line\n";
+	if (($line =~ /([a-z0-9_]+)$/i) and (length($1) > 3)) {
+		my @choices = $self->getChoices($name, $1);
+		if (@choices) {
+		}
+		for (@choices) { print "$_\n" }
+	}
+}
+
+sub scan {
+	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
+#	print "scanning $name\n";
+	
+	my $doc = $self->mdi->docGet($name)->CWidg;
+	my $end = $doc->linenumber('end - 1c');
+	my $count = 0;
+	my $line = $self->_pool->{$name}->{'line'};
+	my $data = $self->_pool->{$name}->{'data'};
+	while ($count < 100) {
+		if ($line > $end) {
+			$self->_pool->{$name}->{'line'} = 1;
+			$self->jobEnd($name);
+#			for (sort keys %$data) { print "$_\n" }
+			return
+		}
+#		print "$line\n";
+		my $content = $doc->get("$line.0", "$line.0 lineend");
 		while ($content ne '') {
-			if ($content =~ /^([^$reg]+)/) {
+			if ($content =~ s/^([a-z0-9_]+)//i) {
 				my $word = $1;
-				$content = substr($content, length($word));
 				if (length($word) > 3) {
+#					print "Found '$word'\n";
 					$data->{$word} = 1;
 				}
 			} else {
 				$content =~ s/^.//;
 			}
 		}
-		my $lastline = $widg->linenumber('end - 1c');
-		$line ++;
-		$line = 1 if $line > $lastline;
-		$self->{WORDDATA}->{$name} = $data;
-		$self->{LINEDATA}->{$name} = $line
+
+		$line++;
+		$count ++;
 	}
-	$self->CycleResume;
+	$self->_pool->{$name}->{'line'} = $line;
 }
 
-sub CyclePause {
-	my $self = shift;
-	$self->afterCancel($self->{AFTERID});
-}
-
-sub CycleResume {
-	my $self = shift;
-	$self->{AFTERID} = $self->after($self->Interval, ['Cycle', $self]);
-}
-
-sub Interval {
-	my $self = shift;
-	$self->{INTERVAL} = shift if @_;
-	return $self->{INTERVAL}
-}
 
 sub Unload {
 	my $self = shift;
-	$self->CyclePause;
+	$self->SUPER::Unload;
+	$self->cmdUnhookBefore('deferred_open', 'docOpen', $self);
+	$self->cmdUnhookAfter('modified', 'activate', $self);
+	$self->cmdUnhookAfter('doc_close', 'docClose', $self);
 }
+
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
 
 
 1;
-
-
-
 
 

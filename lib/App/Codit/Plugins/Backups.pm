@@ -1,15 +1,36 @@
 package App::Codit::Plugins::Backups;
 
+=head1 NAME
+
+App::Codit::Plugins::Backups - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
+use Carp;
+use vars qw( $VERSION );
+$VERSION = 0.01;
+
 use File::Basename;
 use File::Path qw(make_path);
 
-use base qw( Tk::AppWindow::BaseClasses::Plugin );
+use base qw( Tk::AppWindow::BaseClasses::PluginJobs );
 
 =head1 DESCRIPTION
 
 Protect yourself against crashes. This plugin keeps backups of your unsaved files.
+
+=head1 DETAILS
+
+The Backups plugin protects you against crashes of all kinds. 
+It silently does it’s job in the background and only reports when it 
+finds an existing backup of a file you open. 
+
+It keeps backups of all open and unsaved files. Whenever a file is saved or closed 
+the backup is removed. 
+
+It keeps the backups in the configuration folder, it does not pollute your working folders.
 
 =cut
 
@@ -18,44 +39,65 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 	return undef unless defined $self;
 	
-	$self->{INTERVAL} = 20000;
+	$self->interval(1000);
+	$self->{MODIFIED} = {};
+	$self->{ACTIVE} = {};
 	
-	$self->cmdHookAfter('doc_open', 'openDocAfter', $self);
-	$self->cmdHookBefore('doc_new', 'openDocBefore', $self);
+	$self->cmdHookBefore('deferred_open', 'openDocBefore', $self);
+	$self->cmdHookAfter('doc_close', 'closeDocAfter', $self);
+	$self->cmdHookBefore('doc_rename', 'docRenameBefore', $self);
+	$self->cmdHookAfter('doc_save', 'saveDocAfter', $self);
 
 	$self->backupFolder;
-	$self->{AFTERID} = $self->after($self->Interval, ['backupCycle', $self]);
 	return $self;
 }
 
-sub backupCycle {
-	my $self = shift;
+sub backupCheck {
+	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
 	my $mdi = $self->extGet('CoditMDI');
-	my @list = $mdi->docList;
-	for (@list) {
-		my $name = $_;
-		next if $name =~/^Untitled/;
-		if ($mdi->docModified($name)) {
-			$self->backupSave($name);
-		} else {
-			$self->backupRemove($name);
-		}
+
+	unless ($mdi->docExists($name)) {
+		$self->jobEnd($name);
+		return 
 	}
-	$self->backupCycleResume;
+
+	my $mod = $self->{MODIFIED};
+
+	if ($mdi->docModified($name)) {
+		my $widg = $mdi->docGet($name)->CWidg;
+		my $em = $widg->editModified;
+		my $modified = $mod->{$name};
+
+		if (defined $modified) {
+			$self->backupSave($name) if $em ne $modified
+		} else {
+			$self->backupSave($name);
+		}
+
+		$mod->{$name} = $em;
+	} else {
+		$self->backupRemove($name);
+	}
 }
 
-sub backupCyclePause {
-	my $self = shift;
-	$self->afterCancel($self->{AFTERID});
+sub backupPause {
+	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
+	my $dem = $self->extGet('Daemons');
+	$dem->jobPause("$name-backup");
 }
 
-sub backupCycleResume {
-	my $self = shift;
-	$self->{AFTERID} = $self->after($self->Interval, ['backupCycle', $self]);
+sub backupResume {
+	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
+	my $dem = $self->extGet('Daemons');
+	$dem->jobResume("$name-backup");
 }
 
 sub backupExists {
 	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
 	my @list = $self->backupList;
 	for (@list) {
 		return 1 if $_ eq $name
@@ -65,6 +107,7 @@ sub backupExists {
 
 sub backupFile {
 	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
 	$name =~ s/^\///;
 	$name =~ s/\//_-_/g;
 	return $self->backupFolder . "/$name";
@@ -92,6 +135,7 @@ sub backupList {
 
 sub backupName {
 	my ($self, $file) = @_;
+	croak 'Name not defined' unless defined $file;
 	$file =~ s/_-_/\//g;
 	$file = "/$file";
 	return $file
@@ -99,12 +143,14 @@ sub backupName {
 
 sub backupRemove {
 	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
 	my $file = $self->backupFile($name);
 	unlink $file if -e $file;
 }
 
 sub backupRestore {
 	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
 	my $file = $self->backupFile($name);
 	my $mdi = $self->extGet('CoditMDI');
 	my $widg = $mdi->docGet($name)->CWidg;
@@ -117,6 +163,7 @@ sub backupRestore {
 
 sub backupSave {
 	my ($self, $name) = @_;
+	croak 'Name not defined' unless defined $name;
 	my $file = $self->backupFile($name);
 	my $mdi = $self->extGet('CoditMDI');
 	my $widg = $mdi->docGet($name)->CWidg;
@@ -124,16 +171,30 @@ sub backupSave {
 	return 0;
 }
 
-sub Interval {
+sub closeDocAfter {
 	my $self = shift;
-	$self->{INTERVAL} = shift if @_;
-	return $self->{INTERVAL}
+	my ($name) = @_;
+	if ((defined $name) and $name) {
+		$self->jobEnd($name) if $self->jobExists($name);
+		$self->backupRemove($name);
+	}
+	return @_
 }
 
-sub openDocAfter {
+sub docRenameBefore {
 	my $self = shift;
-	my $name = $self->{DOCNAME};
-	if (defined $name) {
+	my ($name, $new) = @_;
+	croak 'Name not defined' unless defined $name;
+	croak 'New name not defined' unless defined $new;
+	$self->jobEnd($name);
+	$self->jobStart($new, 'backupCheck', $self, $new);
+	return @_;
+}
+
+sub openDocBefore {
+	my $self = shift;
+	my ($name) = @_;
+	if ((defined $name) and $name) {
 		if ($self->backupExists($name)) {
 			my $title = 'Backup exists';
 			my $text = 'A backup for ' . basename($name) . " exists.\nDo you want to recover?";
@@ -141,31 +202,71 @@ sub openDocAfter {
 			my $response = $self->popDialog($title, $text, $icon, qw/Yes No/);
 			$self->after(300, ['backupRestore', $self, $name]) if $response eq 'Yes';
 		}
-		$self->backupCycleResume;
+		$self->jobStart($name, 'backupCheck', $self, $name)
 	}
 	return @_;
 }
 
-sub openDocBefore {
+sub saveDocAfter {
 	my $self = shift;
-	
-	my ($name ) = @_;
-	$self->{DOCNAME} = undef;
-	if (defined $name) {
-		$self->{DOCNAME} = $name;
-		$self->backupCyclePause;
+	my ($name) = @_;
+	if ((defined $name) and $name) {
+		$self->backupRemove($name);
+		delete $self->{MODIFIED}->{$name};
 	}
 	return @_;
+}
+
+sub Quit {
+	my $self = shift;
+	for ($self->jobList) { $self->jobEnd($_) }
 }
 
 sub Unload {
 	my $self = shift;
-	$self->backupCyclePause;
-	$self->cmdUnhookAfter('doc_open', 'openDocAfter', $self);
-	$self->cmdUnhookBefore('doc_new', 'openDocBefore', $self);
+	$self->SUPER::Unload;
+	$self->cmdUnhookBefore('deferred_open', 'openDocBefore', $self);
+	$self->cmdUnhookAfter('doc_close', 'closeDocAfter', $self);
+	$self->cmdUnhookBefore('doc_rename', 'docRenameBefore', $self);
+	$self->cmdUnhookAfter('doc_save', 'saveDocAfter', $self);
 }
 
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
+
 1;
+
+
+
+
+
+
+
+
+
 
 
 

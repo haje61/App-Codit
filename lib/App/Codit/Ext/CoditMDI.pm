@@ -2,7 +2,7 @@ package App::Codit::Ext::CoditMDI;
 
 =head1 NAME
 
-App::Codit::Ext::CoditMDI - Multiple Document Interface
+App::Codit::Ext::CoditMDI - Multiple Document Interface for App::Codit
 
 =cut
 
@@ -14,6 +14,7 @@ $VERSION="0.01";
 
 use base qw( Tk::AppWindow::Ext::MDI );
 
+require Tk::AppWindow::PluginsForm;
 require App::Codit::CoditTagsEditor;
 require Tk::YADialog;
 
@@ -27,11 +28,68 @@ require Tk::YADialog;
 
 =head1 DESCRIPTION
 
+Inherits L<Tk::AppWindow::Ext::MDI>.
+
+This is a specially crafted multiple document interface for l<App::Codit>.
+
 =head1 CONFIG VARIABLES
 
 =over 4
 
-none
+=item B<-doc_autoindent>
+
+Sets and returns the autoindent option of the currently selected document.
+
+=item B<-doc_wrap>
+
+Sets and returns the autoindent option of the currently selected document.
+
+=item B<-doc_view_folds>
+
+Sets and returns the showfolds option of the currently selected document.
+
+=item B<-doc_view_numbers>
+
+Sets and returns the shownumbers option of the currently selected document.
+
+=item B<-doc_view_status>
+
+Sets and returns the showstatus option of the currently selected document.
+
+=back
+
+=head1 COMMANDS
+
+=over 4
+
+=item B<-doc_autoindent>
+
+Sets and returns the autoindent option of the currently selected document.
+
+=item B<-doc_find>
+
+Pops up the search bar in the currently selected document.
+
+=item B<-doc_replace>
+
+Pops up the search and replace bar in the currently selected document.
+
+=item B<-doc_wrap>
+
+Sets and returns the wrap option of the currently selected document.
+
+=item B<-edit_delete>, I<$begin>, I<$end>
+
+Deletes text in the currently selected document. It takes two indices as parameters.
+
+=item B<-edit_insert>, I<$index>, I<$text>
+
+Inserts text in the currently selected document. It takes an index and the text parameters.
+
+=item B<-modified>
+
+Dummy command. It is called after every edit. It gets the document name and
+location of the edit as parameters. It is only there so plugins can hook on to it.
 
 =back
 
@@ -53,50 +111,62 @@ sub new {
 	);
 	$self->cmdConfig(
 		doc_autoindent => ['docAutoIndent', $self],
-		doc_select => ['docSelect', $self],
 		doc_find => ['docPopFindReplace', $self, 1],
 		doc_replace => ['docPopFindReplace', $self, 0],
 		doc_wrap => ['docWrap', $self],
 		edit_delete => ['editDelete', $self],
 		edit_insert => ['editInsert', $self],
-		highlightdialog => ['HighlightDialog', $self],
-# 		doc_open_multi => ['CmdMultiOpen', $self],
+		modified => ['contentModified', $self],
 	);
 	return $self;
 }
 
-# sub CmdMultiOpen {
-# 	my $self = shift;
-# 	my $res = 1;
-# 	my $count = 0;
-# 	my $size = @_;
-# 	my $sb = $self->extGet('StatusBar');
-# 	$sb->AddProgressItem('multi_open',
-# 		-from => 0,
-# 		-to => $size,
-# 		-variable => \$count,
-# 	) if defined $sb;
-# 	for (@_) {
-# 		my $file = $_;
-# 		$res = 0 unless $self->cmdExecute('doc_open', $file);
-# 		$count ++;
-# 		$self->update;
-# 	}
-# 	$sb->Delete('multi_open') if defined $sb;
-# 	return $res
-# }
-
-sub deferredList {
+sub CmdDocClose {
 	my $self = shift;
-	my $deferred = $self->{DEFERRED}; 
-	return sort keys %$deferred;
+	my $result = $self->SUPER::CmdDocClose(@_);
+	if ($result) {
+		$self->after(100, sub {
+			my @list = $self->docFullList;
+			$self->cmdExecute('doc_new') unless @list;
+		});
+	}
+	return $result
 }
 
-sub deferredExists {
-	my ($self, $name) = @_;
-	my $deferred = $self->{DEFERRED}; 
-	return 1 if exists $deferred->{$name};
-	return 0
+sub CmdDocNew {
+	my $self = shift;
+	my $result = $self->SUPER::CmdDocNew(@_);
+	$self->disposeUntitled if $result;
+	return $result
+}
+
+sub CmdDocOpen {
+	my $self = shift;
+	my $result = $self->SUPER::CmdDocOpen(@_);
+	$self->disposeUntitled if $result;
+	return $result
+}
+
+sub contentModified {
+	my $self = shift;
+	return @_;
+}
+
+sub DoPostConfig {
+	my $self = shift;
+	$self->SUPER::DoPostConfig;
+#	$self->cmdExecute('doc_new');
+}
+
+sub disposeUntitled {
+	my $self = shift;
+	my @list = $self->docListDisplayed;
+	my $untitled = $list[0];
+	if ((@list eq 2) and ($untitled =~ /^Untitled/)){
+		return if -e $untitled;
+		return if $self->docModified($untitled);
+		$self->cmdExecute('doc_close', $untitled);
+	}
 }
 
 sub docAutoIndent {
@@ -120,7 +190,7 @@ sub docOption {
 }
 
 sub docPopFindReplace {
-	my ($self, $event, $flag) = @_;
+	my ($self, $flag) = @_;
 	my $sel = $self->docSelected;
 	return unless defined $sel;
 	my $doc = $self->docGet($sel);
@@ -130,6 +200,15 @@ sub docPopFindReplace {
 sub docViewFolds {
 	my $self = shift;
 	return $self->docOption('-showfolds', @_);
+}
+
+sub docSelectFirst {
+	my $self = shift;
+	my $sel = $self->docSelected;
+	unless (defined $sel) {
+		my @list = $self->docFullList;
+		$self->cmdExecute('doc_select', $list[0]) if @list;
+	}
 }
 
 sub docViewNumbers {
@@ -147,104 +226,38 @@ sub docWrap {
 	return $self->docOption('-contentwrap', @_);
 }
 
+=item B<editDelete>I<($begin, $end)>
+
+Deletes text in the currently selected document. It takes two indices as parameters.
+
+=cut
+
 sub editDelete {
 	my $self = shift;
 	my $doc = $self->docSelected;
-	$self-docGet($doc)->delete(@_) if defined $doc;
+	return unless defined $doc;
+	$self->docGet($doc)->delete(@_) if defined $doc;
 }
 
+
+=item B<editInsert>I<($index, $text)>
+
+Inserts text in the currently selected document. It takes an index and the text parameters.
+
+=cut
 
 sub editInsert {
 	my $self = shift;
 	my $doc = $self->docSelected;
-	$self-docGet($doc)->insert(@_) if defined $doc;
+	return unless defined $doc;
+	$self->docGet($doc)->insert(@_) if defined $doc;
 }
 
-
-sub HighlightDialog {
-	my $self = shift;
-
-	my @doclist = $self->docList;
- 	unless (@doclist) {
-		$self->popMessage("You need one open document\nfor this to work.\n"); 
-		return
- 	}
- 	my $doc = $self->docGet($doclist[0]);
-
- 	my $themefile = $self->configGet('-highlight_themefile');
-	my $historyfile = $self->extGet('ConfigFolder')->ConfigFolder . '/color_history';
-
-	my $dialog = $self->YADialog(
-		-title => 'Configure highlighting',
-		-buttons => ['Ok', 'Close'],
-	);
-
-	my $editor = $dialog->CoditTagsEditor(
-		-defaultbackground => $doc->cget('-contentbackground'),
-		-defaultforeground => $doc->cget('-contentforeground'),
-		-defaultfont => $doc->cget('-contentfont'),
-		-historyfile => $historyfile,
-		-themefile => $themefile,
-	)->pack(-expand => 1, -fill => 'both');
-	
-	my $bf = $dialog->Subwidget('buttonframe');
-	my $def = $bf->Button(
-		-text => 'Defaults',
-		-command => sub {
-			$self->SetDefaultTheme;
-			$editor->load($self->GetThemeFile);
-			$editor->updateAll;
-		}
-	);
-	$dialog->ButtonPack($def);
-	my $save = $bf->Button(
-		-text => 'Save',
-		-command => sub {
-			my $file = $self->getSaveFile(
-				-filetypes => [
-					['Highlight Theme' => '.ctt'],
-				],
-			);
-			$editor->save($file) if defined $file;
-		},
-	);
-	$dialog->ButtonPack($save);
-	my $load = $bf->Button(
-		-text => 'Load',
-		-command => sub {
-			my $file = $self->getOpenFile(
-				-filetypes => [
-					['Highlight Theme' => '.ctt'],
-				],
-			);
-			if (defined $file) {
-				my $obj = Tk::CodeText::Theme->new;
-				$obj->load($file);
-				$editor->put($obj->get);
-				$editor->updateAll
-			}
-		},
-	);
-	$dialog->ButtonPack($load);
-
-	my $button = $dialog->Show(-popover => $self->GetAppWindow);
-	if ($button eq 'Ok') {
-		$editor->save($themefile);
-		my @list = $self->docList;
-		for (@list) {
-			my $d = $self->docGet($_);
-			$d->configure(-themefile => $themefile);
-		}
-	}
-
-	$dialog->destroy;
-}
 
 sub MenuItems {
 	my $self = shift;
 	my @items = $self->SUPER::MenuItems;
 	return (@items,
-      [ 'menu_normal',    'appname::Settings', '~Highlighting',   'highlightdialog',     'configure', 'F10',],
       [ 'menu',           undef,             '~Edit'], 
       [ 'menu_normal',    'Edit::',           '~Copy',             '<Control-c>',	      'edit-copy',      '*CTRL+C'], 
       [ 'menu_normal',    'Edit::',          'C~ut',					'<Control-x>',			'edit-cut',	      '*CTRL+X'], 
@@ -274,28 +287,53 @@ sub MenuItems {
 	);
 }
 
-# sub SettingsPage {
-# 	my $self = shift;
-# 	my $doc = $self->CurDoc;
-# 	return () unless defined $doc;
-# 	my $themefile = $self->configGet('-themefile');
-# 	print "themefile $themefile\n";
-# 	my $historyfile = $self->extGet('ConfigFolder')->ConfigFolder . '/color_history';
-# 	print "historyfile $historyfile\n";
-# 	my @opt = (
-# 		-defaultbackground => $doc->cget('-contentbackground'),
-# 		-defaultforeground => $doc->cget('-contentforeground'),
-# 		-defaultfont => $doc->cget('-contentfont'),
-# 		-historyfile => $historyfile,
-# 		-themefile => $themefile,
-# 	);
-# 	push @opt, -balloon => $self->extGet('Balloon')->Balloon if $self->extExists('Balloon');
-# 	return (
-# 		'Highlighting' => ['CoditTagsEditor', @opt]
-# 	)
-# }
+sub SettingsPage {
+	my $self = shift;
+	my ($first) = $self->docList;
+	my $doc = $self->docGet($first);
+	return () unless defined $doc;
+	my $themefile = $doc->cget('-highlight_themefile');
+	my $historyfile = $self->extGet('ConfigFolder')->ConfigFolder . '/color_history';
+	my @opt = (
+		-applycall => sub {
+			my $themefile = shift;
+			my @list = $self->docList;
+			for (@list) {
+				my $d = $self->docGet($_);
+				$d->configure(-highlight_themefile => $themefile);
+			}
+		},
+		-defaultbackground => $doc->cget('-contentbackground'),
+		-defaultforeground => $doc->cget('-contentforeground'),
+		-defaultfont => $doc->cget('-contentfont'),
+		-historyfile => $historyfile,
+		-themefile => $themefile,
+	);
+	return (
+		'Highlighting' => ['CoditTagsEditor', @opt]
+	)
+}
+
+sub ToolItems {
+	my $self = shift;
+	my @items = $self->SUPER::ToolItems;
+	return (@items,
+	#	type					label			cmd					icon					help		
+	[	'tool_separator' ],
+	[	'tool_button',		'Copy',		'<Control-c>',		'edit-copy',		'Copy selected text to clipboard'], 
+	[	'tool_button',		'Cut',		'<Control-x>',		'edit-cut',			'Move selected text to clipboard'], 
+	[	'tool_button',		'Paste',		'<Control-v>',		'edit-paste',		'Paste clipboard content into document'], 
+	[	'tool_separator' ],
+	[	'tool_button',		'Undo',		'<Control-z>',		'edit-undo',		'Undo last action'], 
+	[	'tool_button',		'Redo',		'<Control-Z>',		'edit-redo',		'Cancel undo'], 
+	);
+}
 
 =back
+
+=head1 LICENSE
+
+Same as Perl.
 
 =head1 AUTHOR
 
@@ -309,12 +347,10 @@ Unknown. If you find any, please contact the author.
 
 =over 4
 
+=item L<Tk::AppWindow::Ext::MDI>
 
 =back
 
 =cut
 
 1;
-
-
-

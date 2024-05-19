@@ -1,5 +1,11 @@
 package Tk::AppWindow::Plugins::Console;
 
+=head1 NAME
+
+App::Codit::Plugins::Console - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
 
@@ -20,6 +26,32 @@ sub new {
 	
 	return $self;
 }
+
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
 
 
 

@@ -1,5 +1,11 @@
 package App::Codit::Plugins::SearchReplace;
 
+=head1 NAME
+
+App::Codit::Plugins::SearchReplace - plugin for App::Codit
+
+=cut
+
 use strict;
 use warnings;
 
@@ -15,6 +21,15 @@ my $srchprj = 'Search in project files';
 
 Search and replace across multiple files.
 
+=head1 DETAILS
+
+This plugin allows you to do a search and replace across multiple files or just one file. 
+After filling out the search and replace fields you first click Find. 
+
+The list box will fill with the search results. When you click Replace the first item in 
+the list is replaced and then removed from the list. 
+You can skip replaces by pressing Skip. Clear deletes all search results.
+
 =cut
 
 sub new {
@@ -23,7 +38,7 @@ sub new {
 	return undef unless defined $self;
 	
 	my $tp = $self->extGet('ToolPanel');
-	my $page = $tp->addPage('SearchReplace', 'edit-find-replace', 'Search and replace');
+	my $page = $tp->addPage('SearchReplace', 'edit-find-replace', undef, 'Search and replace');
 
 	my $searchterm = '';
 	my $replaceterm = '';
@@ -53,9 +68,10 @@ sub new {
 	   -width => 7,
 	   -anchor => 'e',
 	)->pack(@padding, -side => 'left');
-	$sf->Entry(
+	my $se = $sf->Entry(
 	   -textvariable => \$searchterm,
 	)->pack(@padding, -side => 'left', -expand => 1, -fill => 'x');
+	$se->bind('<Return>', [$self, 'Find']);
 
 	my $rf = $sa->Frame->pack(-expand => 1, -fill => 'x');
 	$rf->Label(
@@ -249,6 +265,11 @@ sub DocWidget {
 
 sub Find {
 	my $self = shift;
+	my $search = $self->{SEARCH};
+	if ($$search eq '') {
+		$self->popMessage("Please enter a search phrase", 'dialog-warning', 32);
+		return
+	}
 	$self->Clear;
 	my $mode = $self->{MODE};
 	my $mdi = $self->extGet('CoditMDI');
@@ -276,7 +297,9 @@ sub FindInDoc {
 	my $results = $self->{RESULTSLIST};
 	unless ($mdi->deferredExists($name)) {
 		my $widg = $mdi->docGet($name)->CWidg;
-		$widg->FindAll($$regex, $$case, $$search);
+		my $srch = $$search;
+		$srch = quotemeta($srch) if $$regex eq 'exact';
+		$widg->FindAll($$regex, $$case, $srch);
 		my @ranges = $widg->tagRanges('sel');
 		if (@ranges) {
 			$results->add($name,
@@ -520,9 +543,40 @@ sub Unload {
 	return 1
 }
 
+=head1 LICENSE
+
+Same as Perl.
+
+=head1 AUTHOR
+
+Hans Jeuken (hanje at cpan dot org)
+
+=head1 TODO
+
+=over 4
+
+=back
+
+=head1 BUGS AND CAVEATS
+
+If you find any bugs, please contact the author.
+
+=head1 SEE ALSO
+
+=over 4
+
+=back
+
+=cut
+
 
 
 1;
+
+
+
+
+
 
 
 
