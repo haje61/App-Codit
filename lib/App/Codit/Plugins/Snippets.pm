@@ -9,7 +9,7 @@ App::Codit::Plugins::Snippets - plugin for App::Codit
 use strict;
 use warnings;
 use vars qw( $VERSION );
-$VERSION = 0.02;
+$VERSION = 0.03;
 
 use Carp;
 
@@ -276,7 +276,7 @@ sub Unload {
 	my $self = shift;
 	$self->snippetSave;
 	$self->extGet('ToolPanel')->deletePage('Snippets');
-	return 1
+	return $self->SUPER::Unload
 }
 
 =head1 LICENSE

@@ -10,7 +10,7 @@ use strict;
 use warnings;
 require Tk::ColorPicker;
 use vars qw( $VERSION );
-$VERSION = 0.02;
+$VERSION = 0.03;
 
 use base qw( Tk::AppWindow::BaseClasses::Plugin );
 
@@ -107,7 +107,7 @@ sub new {
 sub Unload {
 	my $self = shift;
 	$self->extGet('ToolPanel')->deletePage('Colors');
-	return 1
+	return $self->SUPER::Unload
 }
 
 =head1 LICENSE

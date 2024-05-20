@@ -9,7 +9,7 @@ App::Codit::Plugins::PerlSubs - plugin for App::Codit
 use strict;
 use warnings;
 use vars qw( $VERSION );
-$VERSION = 0.02;
+$VERSION = 0.03;
 
 use base qw( Tk::AppWindow::BaseClasses::Plugin );
 require Tk::HList;
@@ -111,16 +111,15 @@ sub NewDocument {
 	my $name = $mdi->docSelected;
 	return @_ unless defined $name;
 	if (defined $name) {
-		$self->{HLIST}->deleteAll;
 		$self->{NAME} = $name;
-		$self->{MODLEVEL} = '';
-#		$self->after(100, ['RefreshList', $self]);
+		$self->after(50, sub { $self->RefreshList(0)});
 	}
 	return @_
 }
 
 sub RefreshList {
-	my $self = shift;
+	my ($self, $select) = @_;
+	$select = 1 unless defined $select;
 	my $name = $self->{NAME};
 
 	my $hlist = $self->{HLIST};
@@ -153,8 +152,10 @@ sub RefreshList {
 	}
 
 	#find and set selection
-	$hlist->selectionSet($current) if defined $current;
-	$hlist->see($lastvisible) if defined $lastvisible;
+	if ($select) {
+		$hlist->selectionSet($current) if defined $current;
+		$hlist->see($lastvisible) if defined $lastvisible;
+	}
 }
 
 sub Select {
@@ -172,12 +173,11 @@ sub Select {
 
 sub Unload {
 	my $self = shift;
-	$self->SUPER::Unload;
 	$self->extGet('NavigatorPanel')->deletePage('PerlSubs');
 	$self->cmdUnhookAfter('modified', 'activate', $self);
 	$self->cmdUnhookAfter('doc_select', 'NewDocument', $self);
 	$self->cmdUnhookAfter('doc_close', 'docAfter', $self);
-	return 1
+	return $self->SUPER::Unload
 }
 
 =head1 LICENSE

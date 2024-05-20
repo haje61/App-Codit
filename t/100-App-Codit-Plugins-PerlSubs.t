@@ -7,6 +7,7 @@ use Test::Tk;
 use Test::More tests => 5;
 use File::Spec;
 $mwclass = 'App::Codit';
+$delay = 800;
 #$quitdelay = 2500;
 
 BEGIN { use_ok('App::Codit::Plugins::PerlSubs') };

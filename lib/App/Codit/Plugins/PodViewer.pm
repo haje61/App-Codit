@@ -9,7 +9,7 @@ App::Codit::Plugins::PodViewer - plugin for App::Codit
 use strict;
 use warnings;
 use vars qw( $VERSION );
-$VERSION = 0.02;
+$VERSION = 0.03;
 
 use base qw( Tk::AppWindow::BaseClasses::Plugin );
 
@@ -232,7 +232,6 @@ sub Quit {
 
 sub Unload {
 	my $self = shift;
-	$self->SUPER::Unload;
 	my @pods = $self->PodList;
 	for (@pods) { $self->PodRemove($_) }
 	unlink $self->PodFile;
@@ -240,7 +239,7 @@ sub Unload {
 	$self->cmdUnhookAfter('doc_close', 'docCloseAfter', $self);
 	$self->cmdUnhookBefore('doc_close', 'docBefore', $self);
 	$self->cmdRemove('flip_pod');
-	return 1
+	return $self->SUPER::Unload
 }
 
 =head1 LICENSE

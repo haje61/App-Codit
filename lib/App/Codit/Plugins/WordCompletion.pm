@@ -9,7 +9,7 @@ App::Codit::Plugins::WordCompletion - plugin for App::Codit
 use strict;
 use warnings;
 use vars qw( $VERSION );
-$VERSION = 0.02;
+$VERSION = 0.03;
 
 use Carp;
 
@@ -174,10 +174,12 @@ sub scan {
 
 sub Unload {
 	my $self = shift;
-	$self->SUPER::Unload;
 	$self->cmdUnhookBefore('deferred_open', 'docOpen', $self);
 	$self->cmdUnhookAfter('modified', 'activate', $self);
 	$self->cmdUnhookAfter('doc_close', 'docClose', $self);
+	# TODO Change this after new version of Tk::AppWindow
+	#return $self->SUPER::Unload;
+	$self->SUPER::Unload;
 	return 1
 }
 
