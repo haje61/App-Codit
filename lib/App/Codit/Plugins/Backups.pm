@@ -215,6 +215,7 @@ sub Unload {
 	$self->cmdUnhookAfter('doc_close', 'closeDocAfter', $self);
 	$self->cmdUnhookBefore('doc_rename', 'docRenameBefore', $self);
 	$self->cmdUnhookAfter('doc_save', 'saveDocAfter', $self);
+	return 1
 }
 
 =head1 LICENSE

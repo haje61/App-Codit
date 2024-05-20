@@ -8,6 +8,9 @@ App::Codit::Plugins::Snippets - plugin for App::Codit
 
 use strict;
 use warnings;
+use vars qw( $VERSION );
+$VERSION = 0.02;
+
 use Carp;
 
 use base qw( Tk::AppWindow::BaseClasses::Plugin );

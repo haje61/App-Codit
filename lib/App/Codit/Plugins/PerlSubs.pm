@@ -8,8 +8,10 @@ App::Codit::Plugins::PerlSubs - plugin for App::Codit
 
 use strict;
 use warnings;
+use vars qw( $VERSION );
+$VERSION = 0.02;
 
-use base qw( Tk::AppWindow::BaseClasses::PluginJobs );
+use base qw( Tk::AppWindow::BaseClasses::Plugin );
 require Tk::HList;
 
 =head1 DESCRIPTION
@@ -34,9 +36,10 @@ sub new {
 	
 	my $tp = $self->extGet('NavigatorPanel');
 	my $page = $tp->addPage('PerlSubs', 'code-context', undef, 'Find your Perl subs');
+	$self->{ACTIVEDELAY} = 300;
+	$self->cmdHookAfter('modified', 'activate', $self);
 	$self->cmdHookAfter('doc_select', 'NewDocument', $self);
 	$self->cmdHookAfter('doc_close', 'docAfter', $self);
-	$self->interval(300);
 	
 	$self->{NAME} = undef;
 	$self->{POSITIONS} = {};
@@ -60,13 +63,26 @@ sub new {
 		$count ++;
 	}
 
-	$self->jobStart('PerlSubs', 'RefreshCycle', $self);
-	
 	my $sel = $self->extGet('CoditMDI')->docSelected;
 	$self->NewDocument($sel) if defined $sel;
 
 	return $self;
 }
+
+sub activate {
+	my $self = shift;
+	my $id = $self->{'active_id'};
+	$self->afterCancel($id) if defined $id;
+	$self->{'active_id'} = $self->after($self->activeDelay, ['RefreshList', $self]);
+	return @_;
+}
+
+sub activeDelay {
+	my $self = shift;
+	$self->{ACTIVEDELAY} = shift if @_;
+	return $self->{ACTIVEDELAY}
+}
+
 
 sub docAfter {
 	my $self = shift;
@@ -101,18 +117,6 @@ sub NewDocument {
 #		$self->after(100, ['RefreshList', $self]);
 	}
 	return @_
-}
-
-sub RefreshCycle {
-	my $self = shift;
-	my $doc = $self->GetDocument;
-	if (defined $doc) {
-		my $mod = $doc->editModified;
-		if ($mod ne $self->{MODLEVEL}) {
-			$self->RefreshList;
-			$self->{MODLEVEL} = $mod;
-		}
-	}
 }
 
 sub RefreshList {
@@ -170,6 +174,7 @@ sub Unload {
 	my $self = shift;
 	$self->SUPER::Unload;
 	$self->extGet('NavigatorPanel')->deletePage('PerlSubs');
+	$self->cmdUnhookAfter('modified', 'activate', $self);
 	$self->cmdUnhookAfter('doc_select', 'NewDocument', $self);
 	$self->cmdUnhookAfter('doc_close', 'docAfter', $self);
 	return 1

@@ -8,6 +8,9 @@ App::Codit::Plugins::WordCompletion - plugin for App::Codit
 
 use strict;
 use warnings;
+use vars qw( $VERSION );
+$VERSION = 0.02;
+
 use Carp;
 
 use base qw( Tk::AppWindow::BaseClasses::PluginJobs );
@@ -175,6 +178,7 @@ sub Unload {
 	$self->cmdUnhookBefore('deferred_open', 'docOpen', $self);
 	$self->cmdUnhookAfter('modified', 'activate', $self);
 	$self->cmdUnhookAfter('doc_close', 'docClose', $self);
+	return 1
 }
 
 =head1 LICENSE
