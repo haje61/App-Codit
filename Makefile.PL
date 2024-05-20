@@ -3,6 +3,7 @@ use ExtUtils::MakeMaker;
 use strict;
 my %prereq = (
 	'File::Path'          => '2.18',
+	'File::Spec'          => '3.75',
 	'Test::Tk'            => '3.03',
 	'Tk'                  => '804.023',
 	'Tk::AppWindow'       => '0.06',

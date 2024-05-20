@@ -81,20 +81,6 @@ sub backupCheck {
 	}
 }
 
-sub backupPause {
-	my ($self, $name) = @_;
-	croak 'Name not defined' unless defined $name;
-	my $dem = $self->extGet('Daemons');
-	$dem->jobPause("$name-backup");
-}
-
-sub backupResume {
-	my ($self, $name) = @_;
-	croak 'Name not defined' unless defined $name;
-	my $dem = $self->extGet('Daemons');
-	$dem->jobResume("$name-backup");
-}
-
 sub backupExists {
 	my ($self, $name) = @_;
 	croak 'Name not defined' unless defined $name;

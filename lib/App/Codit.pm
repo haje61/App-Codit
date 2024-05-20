@@ -109,6 +109,7 @@ sub Populate {
 		-aboutinfo => {
 			version => $VERSION,
 			author => 'Hans Jeuken',
+			http => 'https://github.com/haje61/App-Codit',
 			license => 'Same as Perl',
 		},
 		-helpfile => Tk::findINC('App/Codit/manual.pdf'),
