@@ -138,7 +138,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION="0.05";
+$VERSION="0.06";
 use Tk;
 require App::Codit::CodeTextManager;
 

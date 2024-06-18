@@ -1,5 +1,8 @@
 Revision history for Perl extension App::Codit.
 
+0.06 Tue Jun 18 2024
+	-fixed bugs in SessionManager module.
+
 0.05 Mon Jun 17 2024
 	- fixed POD errors
 	- adjusted plugins Backup and WordCompletion to Tk::AppWindow 0.07.
