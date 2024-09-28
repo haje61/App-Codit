@@ -11,7 +11,7 @@ my $mswin = $Config{'osname'} eq 'MSWin32';
 $mwclass = 'App::Codit';
 
 $quitdelay = 1000;
-$delay = 3000;
+$delay = 4000;
 $delay = 5000 if $mswin;
 
 BEGIN { use_ok('App::Codit::Plugins::Console') };
