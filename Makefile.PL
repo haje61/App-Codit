@@ -11,7 +11,7 @@ my %prereq = (
 	'Tk::AppWindow'       => '0.15',
 	'Tk::CodeText'        => '0.53',
 	'Tk::FileBrowser'     =>	'0.04',
-	'Tk::PodViewer'       =>	'0.04',
+	'Tk::PodViewer'       =>	'0.05',
 	'Tk::Terminal'        =>	'0.03',
 );
 
