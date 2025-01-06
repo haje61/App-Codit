@@ -788,6 +788,7 @@ Same as Perl.
 =head1 AUTHOR
 
 Hans Jeuken (hanje at cpan dot org)
+
 =head1 BUGS AND CAVEATS
 
 If you find any bugs, please contact the author.
