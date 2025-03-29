@@ -14,7 +14,7 @@ You can get and set variables as follows:
  my $value = $app->configGet('-variable_name')
  $app->configPut('-variable_name', $value)
 
-Generated: Wed Jan  8 10:51:43 2025
+Generated: Sat Mar 29 08:32:49 2025
 
 =head1 CONFIG VARIABLES
 
@@ -138,6 +138,14 @@ multiplied by the job interval.
 
 Default value 100. This means every 100 cycles of the B<Daemons> extension. Specifies the interval for
 monitoring the disk status of documents. 
+
+=item B<-doc_autobrackets> I<hookable> in L<App::Codit::Ext::CoditMDI>
+
+Sets and returns the autobrackets option of the currently selected document.
+
+=item B<-doc_autocomplete> I<hookable> in L<App::Codit::Ext::CoditMDI>
+
+Sets and returns the autocomplete option of the currently selected document.
 
 =item B<-doc_autoindent> I<hookable> in L<App::Codit::Ext::CoditMDI>
 
