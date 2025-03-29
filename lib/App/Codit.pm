@@ -215,6 +215,8 @@ Codit comes with these plugins:
 
 =item B<Git> see L<App::Codit::Plugins::Git>
 
+=item B<Icons> see L<App::Codit::Plugins::Icons>
+
 =item B<PerlSubs> see L<App::Codit::Plugins::PerlSubs>
 
 =item B<PodViewer> see L<App::Codit::Plugins::PodViewer>
@@ -224,6 +226,8 @@ Codit comes with these plugins:
 =item B<Sessions> see L<App::Codit::Plugins::Sessions>
 
 =item B<Snippets> see L<App::Codit::Plugins::Snippets>
+
+=item B<SpltView> see L<App::Codit::Plugins::SplitView>
 
 =back
 
